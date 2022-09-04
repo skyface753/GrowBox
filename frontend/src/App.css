@@ -36,3 +36,17 @@
     transform: rotate(360deg);
   }
 }
+
+
+.sensor-bar{
+  display: flex;
+  justify-content: space-around;
+}
+
+.text-green-500{
+  color: #48bb78;
+}
+
+.text-red-500{
+  color: #e53e3e;
+}
