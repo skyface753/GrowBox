@@ -15,7 +15,7 @@ const SensorBarElement = ({ data }) => {
     return moisture >= minGoodMoisture && moisture <= maxGoodMoisture;
   };
   return (
-    <div className="bg-white rounded-lg shadow-lg">
+    <div className="bg-white rounded-lg shadow-lg sensor-bar-element">
       <h2>Sensor {data.sensor_id}</h2>
       {isGoodMoisture(data.moisture) ? (
         <h3 className="text-green-500">{data.moisture}</h3>

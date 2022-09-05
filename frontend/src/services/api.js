@@ -1,5 +1,7 @@
 import axios from "axios";
-const baseURL = "http://localhost:5000/api/v1";
+
+const host = "localhost";
+const baseURL = "http://" + host + ":5000/api/v1";
 
 async function fetch(path) {
   try {
@@ -16,8 +18,11 @@ async function fetch(path) {
 }
 
 const api = {
-  getDashboardData: async () => {
+  getMoistureDashboardData: async () => {
     return await fetch("/moisture/get/dashboard");
+  },
+  getAirDashboardData: async () => {
+    return await fetch("/air/get/dashboard");
   },
 };
 

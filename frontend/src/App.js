@@ -5,66 +5,61 @@ import api from "./services/api";
 import { useEffect, useState } from "react";
 import { FlowerLoader } from "./loaders/flower_loader";
 import SensorBar from "./components/sensor_bar";
-import Chart from "react-apexcharts";
+// import Chart from "react-apexcharts";
+import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
+import HistoricalData from "./components/historical_moisture";
+import AirBar from "./components/air_bar";
+import { client as wsClient } from "./services/api";
 
 const minGoodMoisture = 300;
 const maxGoodMoisture = 600;
-
-const testData = {
-  options: {
-    chart: {
-      id: "basic-bar",
-    },
-    xaxis: {
-      categories: [1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999],
-    },
-  },
-  series: [
-    {
-      name: "series-1",
-      data: [30, 40, 45, 50, 49, 60, 70, 91],
-    },
-  ],
-};
 
 function isGoodMoisture(moisture) {
   return moisture > minGoodMoisture && moisture < maxGoodMoisture;
 }
 
 function App() {
-  const [data, setData] = useState({});
-  const [graphData, setGraphData] = useState(testData);
+  // const [data, setData] = useState({});
+  const [groupedBySensor, setGroupedBySensor] = useState({});
   const [lastPerSensor, setLastPerSensor] = useState({});
+  const [lastAirData, setLastAirData] = useState({});
+  const [allAirData, setAllAirData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.getDashboardData().then((res) => {
-      setData(res.data);
-      setLastPerSensor(res.data.lastPerSensor);
-      const reversed = res.data.all.reverse();
-      setGraphData({
-        options: {
-          chart: {
-            id: "basic-bar",
-          },
-          xaxis: {
-            // TODO: Single xaxis for all sensors
-            categories: reversed.map((item) => {
-              var d = new Date(0);
-              d.setUTCSeconds(item.$createdAt);
-              return d.toLocaleString();
-            }),
-          },
-        },
-        series: [
-          {
-            name: "series-1",
-            data: reversed.map((item) => item.moisture),
-          },
-        ],
-      });
+  const loadData = async () => {
+    api.getMoistureDashboardData().then((res) => {
+      // setData(res.data);
+      setLastPerSensor(res.lastPerSensor);
+      const reversedGroup = res.groupedBySensor;
+      setGroupedBySensor(res.groupedBySensor);
+
       setLoading(false);
     });
+    api.getAirDashboardData().then((res) => {
+      setLastAirData(res.latest);
+      setAllAirData(res.all);
+    });
+  };
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(() => {
+      loadData();
+    }, 10000);
+
+    return () => clearInterval(interval);
+    // wsClient.onopen = () => {
+    //   console.log("WebSocket Client Connected");
+    // };
+    // wsClient.onmessage = (message) => {
+    //   console.log("Refresh data after websocket message");
+    //   loadData();
+    //   // const dataFromServer = JSON.parse(message.data);
+    //   // console.log("got reply! ", dataFromServer);
+
+    //   // console.log(message);
+    // };
+    // wsClient.send("Hello");
   }, []);
 
   console.log(lastPerSensor);
@@ -75,13 +70,17 @@ function App() {
       <h1>Current Sensors</h1>
       {/* Div grid with max 3 columns */}
       <SensorBar sensorList={Object.values(lastPerSensor)} />
-      <Chart
-        options={graphData.options}
-        series={graphData.series}
-        type="line"
-        width="500"
-        height="300"
-      />
+      <AirBar latest={lastAirData} all={allAirData} />
+      {/* <Chart
+        width={"700px"}
+        height={"410px"}
+        chartType="LineChart"
+        loader={<div>Loading Chart</div>}
+        data={LineData}
+        options={LineChartOptions}
+        rootProps={{ "data-testid": "2" }}
+      /> */}
+      <HistoricalData groupedBySensor={groupedBySensor} key={"historical"} />
       {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Object.keys(lastPerSensor).map((sensor_id) => {
           const sensor = lastPerSensor[sensor_id];

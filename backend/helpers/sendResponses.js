@@ -1,8 +1,6 @@
 let sendResponse = {
   success: (res, data) => {
-    res.status(200).send({
-      data: data,
-    });
+    res.status(200).send(data);
   },
   serverError: (res, info) => {
     res.status(500).send(info);

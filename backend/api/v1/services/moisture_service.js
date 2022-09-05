@@ -1,7 +1,9 @@
 const Config = require("../../../config");
 const sendResponse = require("../../../helpers/sendResponses");
 const database = require("../../../appwrite").database;
-
+const { Webhook } = require("discord-webhook-node");
+const hook = new Webhook(Config.discord.webhook);
+hook.setUsername("Moisture Sensor");
 let MoistureService = {
   insert: async (req, res) => {
     try {
@@ -16,13 +18,21 @@ let MoistureService = {
             sensor_id: sensor_id,
           }
         );
-        res.send("OK");
+        if (moisture < 50) {
+          hook.send(
+            `@everyone Sensor ${sensor_id} is under 50% moisture ${moisture}%`
+          );
+        }
+        sendResponse.success(res, "Moisture inserted successfully");
         return;
       } else {
-        res.status(400).send("Bad Request");
+        sendResponse.badRequest(res, "Moisture or sensor_id is missing");
+        return;
       }
     } catch (e) {
-      res.status(400).send("Bad Request");
+      console.log(e);
+      sendResponse.serverError(res, "Something went wrong");
+      return;
     }
   },
   getDashboardData: async (req, res) => {
@@ -30,23 +40,43 @@ let MoistureService = {
       var docs = await database.listDocuments(
         Config.database.collections.moisture
       );
-      // Order by created_at newest first
-      docs.documents.sort((a, b) => {
-        return b.$createdAt - a.$createdAt;
-      });
+      var docsReverse = docs.documents.reverse();
 
       var lastPerSensor = {};
       docs.documents.forEach((doc) => {
-        if (!lastPerSensor[doc.sensor_id]) {
-          lastPerSensor[doc.sensor_id] = doc;
+        if (
+          !lastPerSensor[doc.sensor_id] ||
+          doc.$createdAt > lastPerSensor[doc.sensor_id].$createdAt
+        ) {
+          lastPerSensor[doc.sensor_id] = {
+            moisture: doc.moisture,
+            $createdAt: doc.$createdAt,
+            sensor_id: doc.sensor_id,
+          };
         }
       });
+      var groupedBySensor = {};
+      docs.documents.forEach((doc) => {
+        if (!groupedBySensor[doc.sensor_id]) {
+          groupedBySensor[doc.sensor_id] = [];
+        }
+
+        groupedBySensor[doc.sensor_id].push({
+          moisture: doc.moisture,
+          $createdAt: doc.$createdAt,
+          sensor_id: doc.sensor_id,
+        });
+      });
+
       sendResponse.success(res, {
         lastPerSensor: lastPerSensor,
-        all: docs.documents,
+        all: docsReverse,
+        groupedBySensor: groupedBySensor,
       });
     } catch (e) {
-      res.status(400).send("Bad Request");
+      console.log(e);
+      sendResponse.serverError(res, "Something went wrong");
+      return;
     }
   },
 };

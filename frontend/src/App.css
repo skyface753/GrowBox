@@ -50,3 +50,7 @@
 .text-red-500{
   color: #e53e3e;
 }
+
+.sensor-bar-element{
+  padding: 10px;
+}
